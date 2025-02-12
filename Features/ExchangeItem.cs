@@ -30,6 +30,7 @@ public class ExchangeItem : Feature
         public KeyCode ExchangeItemKey { get; set; } = KeyCode.T;
 
         [FSDisplayName("强制物品交换")]
+        [FSHide]
         public bool ForceExchangeItem { get; set; } = false;
     }
 

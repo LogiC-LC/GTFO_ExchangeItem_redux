@@ -51,7 +51,7 @@ namespace Hikaria.ExchangeItem.Handlers
 
         private void Update()
         {
-            if ((!ExchangeItemManager.MasterHasExchangeItem && !Features.ExchangeItem.Settings.ForceExchangeItem) || m_localPlayer.Interaction.HasWorldInteraction
+            if (m_localPlayer == null || (!ExchangeItemManager.MasterHasExchangeItem && !Features.ExchangeItem.Settings.ForceExchangeItem) || m_localPlayer.Interaction.HasWorldInteraction
                 || (!m_localPlayer.Inventory.WieldedItem?.AllowPlayerInteraction ?? false)
                 || (m_wieldResourcePack?.m_interactApplyResource.TimerIsActive ?? false)
                 || !m_localPlayer.Alive)
