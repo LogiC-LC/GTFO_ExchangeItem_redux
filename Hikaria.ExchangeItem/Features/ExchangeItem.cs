@@ -1,7 +1,9 @@
 ﻿using Hikaria.ExchangeItem.Handlers;
 using Hikaria.ExchangeItem.Managers;
 using Player;
-using TheArchive.Core.Attributes;
+using TheArchive.Core.Attributes.Feature;
+using TheArchive.Core.Attributes.Feature.Members;
+using TheArchive.Core.Attributes.Feature.Patches;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.FeaturesAPI.Settings;
@@ -31,6 +33,7 @@ public class ExchangeItem : Feature
 
         [FSDisplayName("强制物品交换")]
         [FSHide]
+        [FSIgnore]
         public bool ForceExchangeItem { get; set; } = false;
     }
 

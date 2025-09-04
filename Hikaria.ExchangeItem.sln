@@ -1,9 +1,21 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hikaria.ExchangeItem", "Hikaria.ExchangeItem.csproj", "{92E6456D-3176-4B29-A05E-02AFF869B4C0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hikaria.ExchangeItem", "Hikaria.ExchangeItem\Hikaria.ExchangeItem.csproj", "{92E6456D-3176-4B29-A05E-02AFF869B4C0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Localization", "Localization", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		Localization\ExchangeItem_Localization.json = Localization\ExchangeItem_Localization.json
+		Localization\_Hikaria.ExchangeItem_ModuleLocalization.json = Localization\_Hikaria.ExchangeItem_ModuleLocalization.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7FFD5701-679F-4C82-AA44-C8C09EEDFE1D}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		Dependencies.props = Dependencies.props
+		GameFolder.props = GameFolder.props
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,5 +30,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {961430A2-8B26-4EA4-857F-6B88C04E4226}
 	EndGlobalSection
 EndGlobal
