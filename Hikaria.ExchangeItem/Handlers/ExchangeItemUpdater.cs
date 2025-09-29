@@ -9,7 +9,6 @@ namespace Hikaria.ExchangeItem.Handlers
     internal sealed class ExchangeItemUpdater : MonoBehaviour
     {
         private ResourcePackFirstPerson m_wieldResourcePack;
-        private bool m_lastKeyDown;
         private bool m_keyReleased = true;
 
         private bool m_localItemInfAmmo;
@@ -50,7 +49,7 @@ namespace Hikaria.ExchangeItem.Handlers
 
         private void Update()
         {
-            if (m_localPlayer == null || (!ExchangeItemManager.MasterHasExchangeItem && !Features.ExchangeItem.Settings.ForceExchangeItem) || m_localPlayer.Interaction.HasWorldInteraction
+            if (m_localPlayer == null || (!ExchangeItemManager.s_masterHasExchangeItem && !Features.ExchangeItem.Settings.ForceExchangeItem) || m_localPlayer.Interaction.HasWorldInteraction
                 || (!m_localPlayer.Inventory.WieldedItem?.AllowPlayerInteraction ?? false)
                 || (m_wieldResourcePack?.m_interactApplyResource.TimerIsActive ?? false)
                 || !m_localPlayer.Alive)
@@ -255,7 +254,7 @@ namespace Hikaria.ExchangeItem.Handlers
         private void DoExchangeItem()
         {
             m_keyReleased = false;
-            if (ExchangeItemManager.MasterHasExchangeItem)
+            if (ExchangeItemManager.s_masterHasExchangeItem)
             {
                 ExchangeItemManager.WantToExchangeItem(m_actionReceiver.Owner, m_exchangeSlot);
                 return;
@@ -293,10 +292,10 @@ namespace Hikaria.ExchangeItem.Handlers
 
         private Core.Components.Interact_ManualTimedWithCallback m_interactExchangeItem;
 
-        public string Prompt_Exchange => Features.ExchangeItem.Localization.Get(1);
-        public string Prompt_Get => Features.ExchangeItem.Localization.Get(2);
-        public string Prompt_Give => Features.ExchangeItem.Localization.Get(3);
-        public string Prompt_Times => Features.ExchangeItem.Localization.Get(4);
+        public string Prompt_Exchange => Features.ExchangeItem.Localization.GetById(1);
+        public string Prompt_Get => Features.ExchangeItem.Localization.GetById(2);
+        public string Prompt_Give => Features.ExchangeItem.Localization.GetById(3);
+        public string Prompt_Times => Features.ExchangeItem.Localization.GetById(4);
 
         private float m_interactionDuration = 0.6f;
     }

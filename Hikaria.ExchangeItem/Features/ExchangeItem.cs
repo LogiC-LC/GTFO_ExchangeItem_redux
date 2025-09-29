@@ -31,9 +31,9 @@ public class ExchangeItem : Feature
         [FSDisplayName("物品交换按键")]
         public KeyCode ExchangeItemKey { get; set; } = KeyCode.T;
 
-        [FSDisplayName("强制物品交换")]
         [FSHide]
-        [FSIgnore]
+        [FSDisplayName("强制物品交换")]
+        [FSDescription("由于网络同步原因，此选项启用后将可能导致资源余量出现异常，请谨慎开启！！！")]
         public bool ForceExchangeItem { get; set; } = false;
     }
 

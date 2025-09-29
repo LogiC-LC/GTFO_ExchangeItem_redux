@@ -3,20 +3,17 @@ using Hikaria.Core.SNetworkExt;
 using LevelGeneration;
 using Player;
 using SNetwork;
-using System.Collections.Generic;
-using System.Linq;
-using Version = Hikaria.Core.Version;
 
 namespace Hikaria.ExchangeItem.Managers;
 
-public class ExchangeItemManager
+public static class ExchangeItemManager
 {
-	private static readonly Version MinVersion = new Version(2, 0, 0);
+    private static readonly VersionRange versionRange = "2.x.x";
 
-	public static void Setup()
+    public static void Setup()
 	{
 		CoreAPI.OnPlayerModsSynced += OnPlayerModsSynced;
-		GameEventAPI.OnMasterChanged += OnMasterChanged;
+		SNetEventAPI.OnMasterChanged += OnMasterChanged;
 		s_ExchangeItemRequestPacket = SNetExt_Packet<pExchangeItemRequest>.Create(typeof(pExchangeItemRequest).FullName, MasterDoExchangeItem, DoExchangeItemValidate);
 		s_ExchangeItemFixPacket = SNetExt_Packet<pExchangeItemFix>.Create(typeof(pExchangeItemFix).FullName, ReceiveExchangeItemFix, null, true, SNet_ChannelType.GameOrderCritical);
     }
@@ -25,13 +22,13 @@ public class ExchangeItemManager
     {
         if (player.IsMaster)
         {
-            MasterHasExchangeItem = mods.Any(m => m.GUID == PluginInfo.GUID && m.Version >= MinVersion);
+            s_masterHasExchangeItem = CoreAPI.IsPlayerInstalledMod(SNet.Master, PluginInfo.GUID, versionRange);
         }
     }
 
     private static void OnMasterChanged()
     {
-        MasterHasExchangeItem = CoreAPI.IsPlayerInstalledMod(SNet.Master, PluginInfo.GUID, MinVersion);
+        s_masterHasExchangeItem = CoreAPI.IsPlayerInstalledMod(SNet.Master, PluginInfo.GUID, versionRange);
     }
 
 	private static void ReceiveExchangeItemFix(ulong sender, pExchangeItemFix data)
@@ -160,7 +157,7 @@ public class ExchangeItemManager
     }
 
 
-    public static bool MasterHasExchangeItem { get; private set; }
+    public static bool s_masterHasExchangeItem { get; private set; }
 
     private static bool LastFlashLightStatus;
 
