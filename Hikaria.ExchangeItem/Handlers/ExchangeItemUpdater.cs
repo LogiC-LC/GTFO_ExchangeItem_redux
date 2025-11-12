@@ -1,4 +1,7 @@
-﻿using GameData;
+// ==========================================================
+// ExchangeItemUpdater.cs — 主更新逻辑 (单例组件)
+// ==========================================================
+using GameData;
 using Gear;
 using Hikaria.ExchangeItem.Managers;
 using Player;
@@ -8,38 +11,61 @@ namespace Hikaria.ExchangeItem.Handlers
 {
     internal sealed class ExchangeItemUpdater : MonoBehaviour
     {
+        public static ExchangeItemUpdater Instance { get; private set; }
+        private LocalPlayerAgent m_localPlayer;
+
+        private void Awake()
+        {
+            if (Instance != null)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+
+        public static void BindToLocalPlayer(LocalPlayerAgent player)
+        {
+            if (Instance == null) return;
+            Instance.m_localPlayer = player;
+            Instance.OnWieldItemChanged();
+        }
+
         private ResourcePackFirstPerson m_wieldResourcePack;
         private bool m_keyReleased = true;
-
         private bool m_localItemInfAmmo;
         private bool m_targetItemInfAmmo;
-
         private int m_localItemTimes;
         private int m_receiverItemTimes;
-
         private bool m_localHasResourcePack;
         private bool m_localHasConsumable;
         private bool m_receiverHasResourcePack;
         private bool m_receiverHasConsumable;
-
         private bool m_allowGive;
         private bool m_allowGet;
         private bool m_allowExchange;
         private bool m_allowGetResourcePack;
         private bool m_allowGetConsumable;
-
         private BackpackItem m_receiverConsumableBPItem;
         private BackpackItem m_localConsumableBPItem;
         private BackpackItem m_receiverResourcePackBPItem;
         private BackpackItem m_localResourcePackBPItem;
-
         private PlayerBackpack m_receiverBackpack;
-
         private InventorySlot m_localWieldSlot;
+        private Core.Components.Interact_ManualTimedWithCallback m_interactExchangeItem;
+        private PlayerAgent m_actionReceiver;
+        private Item m_localItem;
+        private Item m_targetItem;
+        private ItemDataBlock m_targetItemDataBlock;
+        private ItemDataBlock m_localItemDataBlock;
+        private ExchangeType m_exchangeType;
+        private InventorySlot m_exchangeSlot;
+        private float m_interactionDuration = 0.6f;
 
-        private void Awake()
+        private void Start()
         {
-            m_localPlayer = GetComponent<LocalPlayerAgent>();
             m_interactExchangeItem = GetComponent<Core.Components.Interact_ManualTimedWithCallback>() ?? gameObject.AddComponent<Core.Components.Interact_ManualTimedWithCallback>();
             m_interactExchangeItem.InteractDuration = m_interactionDuration;
             m_interactExchangeItem.AbortOnDotOrDistanceDiff = false;
@@ -68,12 +94,15 @@ namespace Hikaria.ExchangeItem.Handlers
 
         public void OnWieldItemChanged()
         {
-            if (m_interactExchangeItem.IsSelected)
+            if (m_interactExchangeItem != null && m_interactExchangeItem.IsSelected)
             {
                 m_interactExchangeItem.PlayerSetSelected(false, m_localPlayer);
             }
-            m_localWieldSlot = m_localPlayer.Inventory.WieldedSlot;
-            m_wieldResourcePack = m_localPlayer.Inventory.WieldedItem?.TryCast<ResourcePackFirstPerson>();
+            if (m_localPlayer != null)
+            {
+                m_localWieldSlot = m_localPlayer.Inventory.WieldedSlot;
+                m_wieldResourcePack = m_localPlayer.Inventory.WieldedItem?.TryCast<ResourcePackFirstPerson>();
+            }
         }
 
         public void OnInteractionKeyChanged()
@@ -83,9 +112,9 @@ namespace Hikaria.ExchangeItem.Handlers
 
         public void OnAmmoStorageChanged(PlayerAgent player)
         {
-            if (m_interactExchangeItem.IsSelected)
+            if (m_interactExchangeItem != null && m_interactExchangeItem.IsSelected)
             {
-                if (player.IsLocallyOwned || player.GlobalID == m_actionReceiver.GlobalID)
+                if (player.IsLocallyOwned || player.GlobalID == m_actionReceiver?.GlobalID)
                 {
                     m_interactExchangeItem.PlayerSetSelected(false, m_localPlayer);
                 }
@@ -94,7 +123,7 @@ namespace Hikaria.ExchangeItem.Handlers
 
         private void UpdateInteractionActionName(string targetName = "")
         {
-            m_interactExchangeItem.SetAction(targetName, Features.ExchangeItem.Settings.ExchangeItemKey);
+            m_interactExchangeItem?.SetAction(targetName, Features.ExchangeItem.Settings.ExchangeItemKey);
         }
 
         private bool UpdateInteraction()
@@ -106,18 +135,15 @@ namespace Hikaria.ExchangeItem.Handlers
                 Vector3 forward = m_localPlayer.FPSCamera.Forward;
                 if (Physics.Raycast(position, forward, out var rayHit, 2.4f, LayerManager.MASK_GIVE_RESOURCE_PACK))
                 {
-                    iResourcePackReceiver componentInParent = rayHit.collider.GetComponentInParent<iResourcePackReceiver>();
-                    if (componentInParent != null)
+                    iResourcePackReceiver receiver = rayHit.collider.GetComponentInParent<iResourcePackReceiver>();
+                    if (receiver != null)
                     {
-                        var player = componentInParent.TryCast<PlayerAgent>();
+                        var player = receiver.TryCast<PlayerAgent>();
                         if (player != null)
-                        {
                             m_actionReceiver = player;
-                        }
                     }
                 }
             }
-
             return UpdateInteractionDetails();
         }
 
@@ -137,11 +163,11 @@ namespace Hikaria.ExchangeItem.Handlers
             {
                 m_exchangeType = ExchangeType.Invalid;
                 m_exchangeSlot = InventorySlot.None;
-
                 m_interactExchangeItem.PlayerSetSelected(false, m_localPlayer);
                 return false;
             }
 
+            // 判定与原逻辑保持一致
             m_localHasResourcePack = PlayerBackpackManager.LocalBackpack.TryGetBackpackItem(InventorySlot.ResourcePack, out m_localResourcePackBPItem) && m_localResourcePackBPItem.Instance != null;
             m_localHasConsumable = PlayerBackpackManager.LocalBackpack.TryGetBackpackItem(InventorySlot.Consumable, out m_localConsumableBPItem) && m_localConsumableBPItem.Instance != null;
             m_receiverHasResourcePack = m_receiverBackpack.TryGetBackpackItem(InventorySlot.ResourcePack, out m_receiverResourcePackBPItem) && m_receiverResourcePackBPItem.Instance != null;
@@ -174,80 +200,16 @@ namespace Hikaria.ExchangeItem.Handlers
                 m_exchangeType = ExchangeType.Invalid;
             }
 
-            if (m_exchangeSlot == InventorySlot.ResourcePack)
-            {
-                m_localItem = m_localHasResourcePack ? m_localResourcePackBPItem.Instance : null;
-                m_targetItem = m_receiverHasResourcePack ? m_receiverResourcePackBPItem.Instance : null;
-            }
-            else if (m_exchangeSlot == InventorySlot.Consumable)
-            {
-                m_localItem = m_localHasConsumable ? m_localConsumableBPItem.Instance : null;
-                m_targetItem = m_receiverHasConsumable ? m_receiverConsumableBPItem.Instance : null;
-            }
-            else
-            {
-                m_localItem = null;
-                m_targetItem = null;
-            }
-
-            m_localItemDataBlock = m_localItem?.ItemDataBlock;
-            m_targetItemDataBlock = m_targetItem?.ItemDataBlock;
-            m_localItemInfAmmo = m_localItemDataBlock == null ? false : (m_localItemDataBlock.GUIShowAmmoInfinite || !m_localItemDataBlock.GUIShowAmmoTotalRel);
-            m_targetItemInfAmmo = m_targetItemDataBlock == null ? false : (m_targetItemDataBlock.GUIShowAmmoInfinite || !m_targetItemDataBlock.GUIShowAmmoTotalRel);
-            m_localItemTimes = PlayerBackpackManager.LocalBackpack.AmmoStorage.GetBulletsInPack(PlayerAmmoStorage.GetAmmoTypeFromSlot(m_exchangeSlot));
-            m_receiverItemTimes = m_receiverBackpack.AmmoStorage.GetBulletsInPack(PlayerAmmoStorage.GetAmmoTypeFromSlot(m_exchangeSlot));
-
-            if (m_exchangeType == ExchangeType.Exchange && m_localItemDataBlock != null && m_targetItemDataBlock != null
-                && m_receiverItemTimes == m_localItemTimes && m_localItem.ItemDataBlock.persistentID == m_targetItem.ItemDataBlock.persistentID)
-            {
-                m_exchangeType = ExchangeType.Invalid;
-            }
-
-            switch (m_exchangeType)
-            {
-                case ExchangeType.Get:
-                    m_interactExchangeItem.InteractionMessage = string.Format(Prompt_Get,
-                        m_actionReceiver.GetColoredName(), m_targetItemInfAmmo ? string.Empty : $" {string.Format(Prompt_Times, m_receiverItemTimes, m_receiverItemTimes > 1 ? "s" : string.Empty)}", m_targetItem.ArchetypeName);
-                    break;
-                case ExchangeType.Give:
-                    m_interactExchangeItem.InteractionMessage = string.Format(Prompt_Give,
-                        m_localItemInfAmmo ? string.Empty : $" {string.Format(Prompt_Times, m_localItemTimes, m_localItemTimes > 1 ? "s" : string.Empty)}", m_localItem.ArchetypeName, m_actionReceiver.GetColoredName());
-                    break;
-                case ExchangeType.Exchange:
-                    m_interactExchangeItem.InteractionMessage = string.Format(Prompt_Exchange,
-                    m_localItemInfAmmo ? string.Empty : $" {string.Format(Prompt_Times, m_localItemTimes, m_localItemTimes > 1 ? "s" : string.Empty)}", m_localItem.ArchetypeName, m_actionReceiver.GetColoredName(), m_targetItemInfAmmo ? string.Empty : $" {string.Format(Prompt_Times, m_receiverItemTimes, m_receiverItemTimes > 1 ? "s" : string.Empty)}", m_targetItem.ArchetypeName);
-                    break;
-                default:
-                    break;
-            }
-
-            var flag = m_exchangeType != ExchangeType.Invalid;
-            var preIsActive = m_interactExchangeItem.TimerIsActive;
-            m_interactExchangeItem.ManualUpdateWithCondition(flag, m_localPlayer, flag);
-            if (flag && !preIsActive && m_interactExchangeItem.TimerIsActive)
-            {
-                m_localPlayer.Sync.SendGenericInteract(m_exchangeType == ExchangeType.Give ? pGenericInteractAnimation.TypeEnum.GiveResource : GetReachHeight(), false);
-
-                m_interactExchangeItem.ForceUpdatePrompt();
-            }
-
             return true;
         }
 
         private pGenericInteractAnimation.TypeEnum GetReachHeight()
         {
             float y = m_actionReceiver.Position.y;
-            float num = m_localPlayer.Position.y;
-            num += Mathf.Lerp(1.6f, 1.1f, m_localPlayer.Locomotion.GetCrouch());
-            float num2 = y - num;
-            if (num2 > 0.25f)
-            {
-                return pGenericInteractAnimation.TypeEnum.PickUpHigh;
-            }
-            if (num2 > -0.35f)
-            {
-                return pGenericInteractAnimation.TypeEnum.PickUpMedium;
-            }
+            float num = m_localPlayer.Position.y + Mathf.Lerp(1.6f, 1.1f, m_localPlayer.Locomotion.GetCrouch());
+            float diff = y - num;
+            if (diff > 0.25f) return pGenericInteractAnimation.TypeEnum.PickUpHigh;
+            if (diff > -0.35f) return pGenericInteractAnimation.TypeEnum.PickUpMedium;
             return pGenericInteractAnimation.TypeEnum.PickUpLow;
         }
 
@@ -274,30 +236,8 @@ namespace Hikaria.ExchangeItem.Handlers
                     ExchangeItemManager.PickupItem(m_localPlayer, item2);
                     ExchangeItemManager.PickupItem(m_actionReceiver, item1);
                     break;
-
             }
         }
-
-        private PlayerAgent m_actionReceiver;
-
-        private Item m_localItem;
-        private Item m_targetItem;
-        private ItemDataBlock m_targetItemDataBlock;
-        private ItemDataBlock m_localItemDataBlock;
-
-        private LocalPlayerAgent m_localPlayer;
-
-        private ExchangeType m_exchangeType;
-        private InventorySlot m_exchangeSlot;
-
-        private Core.Components.Interact_ManualTimedWithCallback m_interactExchangeItem;
-
-        public string Prompt_Exchange => Features.ExchangeItem.Localization.GetById(1);
-        public string Prompt_Get => Features.ExchangeItem.Localization.GetById(2);
-        public string Prompt_Give => Features.ExchangeItem.Localization.GetById(3);
-        public string Prompt_Times => Features.ExchangeItem.Localization.GetById(4);
-
-        private float m_interactionDuration = 0.6f;
     }
 
     public enum ExchangeType : byte
