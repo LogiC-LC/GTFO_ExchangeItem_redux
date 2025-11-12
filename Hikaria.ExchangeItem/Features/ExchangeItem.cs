@@ -1,88 +1,75 @@
-﻿using Hikaria.ExchangeItem.Handlers;
+// ==========================================================
+// ExchangeItem.cs — 主功能模块 (Feature)
+// ==========================================================
+using Hikaria.ExchangeItem.Handlers;
 using Hikaria.ExchangeItem.Managers;
 using Player;
 using TheArchive.Core.Attributes.Feature;
-using TheArchive.Core.Attributes.Feature.Members;
 using TheArchive.Core.Attributes.Feature.Patches;
-using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.FeaturesAPI.Settings;
 using TheArchive.Core.Localization;
-using TheArchive.Loader;
 using UnityEngine;
 
-namespace Hikaria.ExchangeItem.Features;
-
-[EnableFeatureByDefault]
-[DisallowInGameToggle]
-public class ExchangeItem : Feature
+namespace Hikaria.ExchangeItem.Features
 {
-    public override string Name => "资源交换";
-
-    public override bool InlineSettingsIntoParentMenu => true;
-
-    public static new ILocalizationService Localization { get; set; }
-
-    [FeatureConfig]
-    public static ExchangeItemSetting Settings { get; set; }
-
-    public class ExchangeItemSetting
+    [EnableFeatureByDefault]
+    [DisallowInGameToggle]
+    public class ExchangeItem : Feature
     {
-        [FSDisplayName("物品交换按键")]
-        public KeyCode ExchangeItemKey { get; set; } = KeyCode.T;
+        public override string Name => "资源交换";
+        public static new ILocalizationService Localization { get; set; }
 
-        [FSHide]
-        [FSDisplayName("强制物品交换")]
-        [FSDescription("由于网络同步原因，此选项启用后将可能导致资源余量出现异常，请谨慎开启！！！")]
-        public bool ForceExchangeItem { get; set; } = false;
-    }
+        [FeatureConfig]
+        public static ExchangeItemSetting Settings { get; set; }
 
-    public override void OnFeatureSettingChanged(FeatureSetting setting)
-    {
-        _updater?.OnInteractionKeyChanged();
-    }
-
-    private static ExchangeItemUpdater _updater;
-
-    [ArchivePatch(typeof(LocalPlayerAgent), nameof(LocalPlayerAgent.Setup))]
-    private class LocalPlayerAgent__Setup__Patch
-    {
-        private static void Postfix(LocalPlayerAgent __instance)
+        public class ExchangeItemSetting
         {
-            _updater = __instance.GetComponent<ExchangeItemUpdater>() ?? __instance.gameObject.AddComponent<ExchangeItemUpdater>();
+            public KeyCode ExchangeItemKey { get; set; } = KeyCode.T;
+
+            [FSDisplayName("强制物品交换")]
+            [FSDescription("由于网络同步原因，此选项启用后将可能导致资源余量异常，请谨慎开启！")]
+            public bool ForceExchangeItem { get; set; } = false;
         }
-    }
 
-    [ArchivePatch(typeof(PlayerInventoryLocal), nameof(PlayerInventoryLocal.DoWieldItem))]
-    private class PlayerInventoryLocal__DoWieldItem__Patch
-    {
-        private static void Postfix(PlayerInventoryLocal __instance)
+        public override void OnFeatureSettingChanged(FeatureSetting setting)
         {
-            if (!__instance.AllowedToWieldItem)
-                return;
-
-            _updater?.OnWieldItemChanged();
+            ExchangeItemUpdater.Instance?.OnInteractionKeyChanged();
         }
-    }
 
-    [ArchivePatch(typeof(PlayerAmmoStorage), nameof(PlayerAmmoStorage.SetStorageData))]
-    private class PlayerAmmoStorage__SetStorageData__Patch
-    {
-        private static void Postfix(PlayerAmmoStorage __instance)
+        [ArchivePatch(typeof(LocalPlayerAgent), nameof(LocalPlayerAgent.Setup))]
+        private class LocalPlayerAgent__Setup__Patch
         {
-            if (_updater != null)
+            private static void Postfix(LocalPlayerAgent __instance)
             {
-                var playerAgent = __instance.m_playerBackpack?.Owner?.PlayerAgent?.TryCast<PlayerAgent>();
-                if (playerAgent != null)
-                    _updater.OnAmmoStorageChanged(playerAgent);
+                ExchangeItemUpdater.BindToLocalPlayer(__instance);
             }
         }
-    }
 
-    public override void Init()
-    {
-        LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<ExchangeItemUpdater>();
+        [ArchivePatch(typeof(PlayerInventoryLocal), nameof(PlayerInventoryLocal.DoWieldItem))]
+        private class PlayerInventoryLocal__DoWieldItem__Patch
+        {
+            private static void Postfix()
+            {
+                ExchangeItemUpdater.Instance?.OnWieldItemChanged();
+            }
+        }
 
-        ExchangeItemManager.Setup();
+        [ArchivePatch(typeof(PlayerAmmoStorage), nameof(PlayerAmmoStorage.SetStorageData))]
+        private class PlayerAmmoStorage__SetStorageData__Patch
+        {
+            private static void Postfix(PlayerAmmoStorage __instance)
+            {
+                var agent = __instance.m_playerBackpack?.Owner?.PlayerAgent?.TryCast<PlayerAgent>();
+                if (agent != null)
+                    ExchangeItemUpdater.Instance?.OnAmmoStorageChanged(agent);
+            }
+        }
+
+        public override void Init()
+        {
+            ExchangeItemManager.Setup();
+        }
     }
 }
+
